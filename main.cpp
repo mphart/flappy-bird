@@ -16,7 +16,7 @@ class Wall{
     private:
 		static int vx;
         int x;
-        int y;
+        int y; // height of the top wall
 		static int const wallWidth = 3;
 		static int const gapY = 7;
 		static int const gapX = 5;
@@ -65,17 +65,19 @@ class Wall{
 
 		int getX() { return x; }
 		int getY() { return y; }
+		int getGapY() { return gapY; }
 };
 
 class Bird{
     private:
-		static float constexpr ay = 0.6;
-		static float constexpr jumpVel = -3;
+		static float constexpr ay = 0.4;
+		static float constexpr jumpVel = -2;
 		float vy;
         int x;
         int y;
+		int sY;
     public:
-        Bird(int startX, int startY) : x(startX), y(startY) {}
+        Bird(int startX, int startY) : x(startX), y(startY), sY(startY) {}
         ~Bird() {}
 
 		bool registerJump() {
@@ -93,7 +95,11 @@ class Bird{
 
         bool dead(std::vector<Wall> walls) {
 			for(auto& wall : walls){
-
+				if(x == wall.getX() &&
+					(y <= wall.getY() || y >= wall.getY() + wall.getGapY() )
+				) {
+					return true;
+				}
 			}
 			return (y <= 0 || y >= h);
         }
@@ -101,9 +107,14 @@ class Bird{
         void update() {
 			vy += ay;
 			y += (int)vy;
-			vy = clamp(jumpVel, -jumpVel, vy);
+			// vy = clamp(jumpVel, -jumpVel, vy);
 			y = clamp(0, h, y);
         }
+
+		void reset() { 
+			vy = 0; 
+			y = sY;
+		}
 
 		int getX() { return x; }
 		int getY() { return y; }
@@ -124,18 +135,19 @@ class Game {
 			walls.emplace_back(w, 0);
 		}
 
-	public:
-		Game() : bird(std::make_unique<Bird>(birdStartX, birdStartY)), score(0), tick(0), isGameOver(false) {
-			walls.reserve(numWalls);
-		}
-		~Game() { walls.clear(); }
-
 		void gameOver() {
 			isGameOver = true;
 			walls.clear();
 			tick = 0;
 			score = 0;
+			bird->reset();
 		}
+
+	public:
+		Game() : bird(std::make_unique<Bird>(birdStartX, birdStartY)), score(0), tick(0), isGameOver(false) {
+			walls.reserve(numWalls);
+		}
+		~Game() { walls.clear(); }
 
 		void restart() {
 			isGameOver = false;
@@ -205,7 +217,7 @@ class Game {
 
 				// score
 				move(h, 0);
-				printw("Score: %d", score);
+				printw("Score: %d\nTick: %d", score, tick);
 			}
 		}
 
@@ -226,7 +238,6 @@ int main(int argc, char **argv){
 
 	// main loop
 	char cmd;
-	int t = 0;
 	do {
 		clear();
 		g->display();
@@ -235,7 +246,7 @@ int main(int argc, char **argv){
 		napms(50);
 
 		cmd = getch();
-		t = g->update(cmd);
+		g->update(cmd);
 
 	} while(cmd != 'q');
 
